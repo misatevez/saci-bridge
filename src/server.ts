@@ -1,6 +1,8 @@
 import { createApp } from './app.js';
 import { config } from './config.js';
 import { logger } from './logger.js';
+import { startPoller, stopPoller } from './poller/index.js';
+import { closeFirmasPool } from './db/firmas.js';
 
 const app = createApp();
 
@@ -9,11 +11,16 @@ const server = app.listen(config.port, config.host, () => {
     { host: config.host, port: config.port, env: config.nodeEnv },
     'saci-bridge listening',
   );
+  if (config.nodeEnv !== 'test') {
+    startPoller();
+  }
 });
 
 function shutdown(signal: string): void {
   logger.info({ signal }, 'shutting down');
-  server.close((err) => {
+  stopPoller();
+  server.close(async (err) => {
+    await closeFirmasPool();
     if (err) {
       logger.error({ err }, 'error during shutdown');
       process.exit(1);

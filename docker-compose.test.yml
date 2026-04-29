@@ -1,0 +1,29 @@
+version: '3.9'
+
+services:
+  firmas-db:
+    image: mariadb:10.11
+    environment:
+      MARIADB_ROOT_PASSWORD: rootpass
+      MARIADB_DATABASE: firmascrm
+      MARIADB_USER: saci_bridge_reader
+      MARIADB_PASSWORD: readerpass
+    ports:
+      - '3307:3306'
+    volumes:
+      - ./docker/init-firmas.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ['CMD', 'mariadb-admin', 'ping', '-h', '127.0.0.1', '-u', 'root', '-prootpass']
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  saci-mock:
+    build:
+      context: ./mocks/saci-api-mock
+      dockerfile: Dockerfile
+    ports:
+      - '9100:9100'
+    environment:
+      PORT: 9100
+      NODE_ENV: development

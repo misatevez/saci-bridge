@@ -3,6 +3,7 @@ import { config } from './config.js';
 import { logger } from './logger.js';
 import { startPoller, stopPoller } from './poller/index.js';
 import { closeFirmasPool } from './db/firmas.js';
+import { closeLocalPool } from './db/local.js';
 
 const app = createApp();
 
@@ -20,7 +21,7 @@ function shutdown(signal: string): void {
   logger.info({ signal }, 'shutting down');
   stopPoller();
   server.close(async (err) => {
-    await closeFirmasPool();
+    await Promise.all([closeFirmasPool(), closeLocalPool()]);
     if (err) {
       logger.error({ err }, 'error during shutdown');
       process.exit(1);

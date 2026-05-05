@@ -7,7 +7,13 @@ export interface Config {
   logLevel: string;
   saciErp: {
     apiUrl: string;
+    /** Static token fallback (used when oauth2TokenUrl is empty) */
     apiToken: string;
+    oauth2TokenUrl: string;
+    oauth2ClientId: string;
+    oauth2ClientSecret: string;
+    oauth2Username: string;
+    oauth2Password: string;
   };
   suitecrm: {
     baseUrl: string;
@@ -61,6 +67,11 @@ export function loadConfig(): Config {
     saciErp: {
       apiUrl: readEnv('SACIERP_API_URL', 'http://localhost/saci_api_mock/'),
       apiToken: readEnv('SACIERP_API_TOKEN'),
+      oauth2TokenUrl: readEnv('SACIERP_API_TOKEN_URL'),
+      oauth2ClientId: readEnv('SACIERP_BRIDGE_CLIENT_ID'),
+      oauth2ClientSecret: readEnv('SACIERP_BRIDGE_CLIENT_SECRET'),
+      oauth2Username: readEnv('SACIERP_ADMIN_USER', 'admin'),
+      oauth2Password: readEnv('SACIERP_ADMIN_PWD'),
     },
     suitecrm: {
       baseUrl: readEnv('SUITECRM_BASE_URL', 'https://firmas.moacrm.com'),

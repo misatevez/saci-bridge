@@ -7,12 +7,19 @@ import { transformProduct } from './product.js';
 
 export type { TransformResult } from './types.js';
 
-export function transform(module: OutboxModule, payloadJson: string): TransformResult {
+export function transform(
+  module: OutboxModule,
+  payloadJson: string,
+  saciId?: string | null,
+): TransformResult {
   const payload = JSON.parse(payloadJson) as Record<string, unknown>;
 
   switch (module) {
     case 'Accounts':
-      return transformAccount(payload as unknown as Parameters<typeof transformAccount>[0]);
+      return transformAccount(
+        payload as unknown as Parameters<typeof transformAccount>[0],
+        saciId,
+      );
     case 'Contacts':
       return transformContact(payload as unknown as Parameters<typeof transformContact>[0]);
     case 'AOS_Quotes':

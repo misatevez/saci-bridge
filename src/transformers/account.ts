@@ -12,7 +12,10 @@ export interface AccountPayload {
   sic_code?: string;
 }
 
-export function transformAccount(payload: AccountPayload): TransformResult {
+/**
+ * @param saciId - Existing SaciERP client ID; when provided, generates a PATCH request.
+ */
+export function transformAccount(payload: AccountPayload, saciId?: string | null): TransformResult {
   const address = [
     payload.billing_address_street,
     payload.billing_address_city,
@@ -30,5 +33,8 @@ export function transformAccount(payload: AccountPayload): TransformResult {
     address: address || undefined,
   };
 
+  if (saciId) {
+    return { endpoint: `/clientes/${saciId}`, method: 'PATCH', payload: cliente };
+  }
   return { endpoint: '/clientes', method: 'POST', payload: cliente };
 }

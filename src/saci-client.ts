@@ -1,7 +1,10 @@
 import axios, { type AxiosResponse, isAxiosError } from 'axios';
 import { config } from './config.js';
 import { logger } from './logger.js';
+import { getSaciToken, invalidateToken } from './auth.js';
 import type { SaciPayload } from './transformers/types.js';
+
+export type HttpMethod = 'POST' | 'PATCH';
 
 export type HttpOutcome =
   | { ok: true; status: number; body: unknown }
@@ -10,55 +13,77 @@ export type HttpOutcome =
 
 const TIMEOUT_MS = 10_000;
 
-function buildClient() {
+async function buildClient() {
+  const token = await getSaciToken();
   return axios.create({
     baseURL: config.saciErp.apiUrl,
     timeout: TIMEOUT_MS,
     headers: {
       'Content-Type': 'application/json',
-      Authorization: `Bearer ${config.saciErp.apiToken}`,
+      Authorization: `Bearer ${token}`,
     },
   });
 }
 
-export async function postToSaci(
+export async function callSaci(
   outboxId: string,
+  method: HttpMethod,
   endpoint: string,
   payload: SaciPayload,
 ): Promise<HttpOutcome> {
-  const client = buildClient();
+  const client = await buildClient();
 
   try {
-    const res: AxiosResponse = await client.post(endpoint, payload, {
-      headers: { 'X-Idempotency-Key': outboxId },
-    });
+    let res: AxiosResponse;
+    if (method === 'PATCH') {
+      res = await client.patch(endpoint, payload, {
+        headers: { 'X-Idempotency-Key': outboxId },
+      });
+    } else {
+      res = await client.post(endpoint, payload, {
+        headers: { 'X-Idempotency-Key': outboxId },
+      });
+    }
     logger.info(
-      { '[SACI-POLLER]': true, outboxId, endpoint, status: res.status },
-      '[SACI-POLLER] POST success',
+      { '[SACI-POLLER]': true, outboxId, method, endpoint, status: res.status },
+      '[SACI-POLLER] Call success',
     );
     return { ok: true, status: res.status, body: res.data };
   } catch (err) {
     if (isAxiosError(err) && err.response) {
       const { status, data } = err.response;
+
+      // Invalidate cached token on 401 so next retry gets a fresh one
+      if (status === 401) {
+        invalidateToken();
+      }
+
       logger.warn(
-        { '[SACI-POLLER]': true, outboxId, endpoint, status, body: data },
-        '[SACI-POLLER] POST HTTP error',
+        { '[SACI-POLLER]': true, outboxId, method, endpoint, status, body: data },
+        '[SACI-POLLER] HTTP error',
       );
-      // 4xx = non-retryable (bad payload, auth error)
       if (status >= 400 && status < 500) {
         return { ok: false, status, body: data, retryable: false };
       }
-      // 5xx = retryable
       return { ok: false, status: null, error: `HTTP ${status}`, retryable: true };
     }
 
     const message = err instanceof Error ? err.message : String(err);
     logger.warn(
-      { '[SACI-POLLER]': true, outboxId, endpoint, error: message },
-      '[SACI-POLLER] POST network error',
+      { '[SACI-POLLER]': true, outboxId, method, endpoint, error: message },
+      '[SACI-POLLER] Network error',
     );
     return { ok: false, status: null, error: message, retryable: true };
   }
+}
+
+/** @deprecated Use callSaci instead */
+export async function postToSaci(
+  outboxId: string,
+  endpoint: string,
+  payload: SaciPayload,
+): Promise<HttpOutcome> {
+  return callSaci(outboxId, 'POST', endpoint, payload);
 }
 
 export function computeNextRetry(retryCount: number, backoffBaseMs: number): Date {

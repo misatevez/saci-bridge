@@ -37,6 +37,18 @@ describe('transformAccount', () => {
     const payload = result.payload as SaciCliente;
     expect(payload.identification).toBe('acc-999');
   });
+
+  it('generates PATCH when saciId is provided', () => {
+    const result = transformAccount({ id: 'acc-001', name: 'Acme Corp' }, 'saci-uuid-123');
+    expect(result.method).toBe('PATCH');
+    expect(result.endpoint).toBe('/clientes/saci-uuid-123');
+  });
+
+  it('generates POST when saciId is null', () => {
+    const result = transformAccount({ id: 'acc-001', name: 'Acme Corp' }, null);
+    expect(result.method).toBe('POST');
+    expect(result.endpoint).toBe('/clientes');
+  });
 });
 
 describe('transformContact', () => {

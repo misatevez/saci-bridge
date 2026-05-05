@@ -36,10 +36,25 @@ export interface SaciProducto {
   estado: boolean;
 }
 
-export type SaciPayload = SaciCliente | SaciPedido | SaciProducto;
+export interface SaciV8Record {
+  data: {
+    type: string;
+    id?: string;
+    attributes: Record<string, unknown>;
+  };
+}
 
-export interface TransformResult {
+export type SaciPayload = SaciCliente | SaciPedido | SaciProducto | SaciV8Record;
+
+export interface SendResult {
   endpoint: string;
   method: 'POST' | 'PATCH';
   payload: SaciPayload;
 }
+
+export interface SkipResult {
+  skip: true;
+  reason: string;
+}
+
+export type TransformResult = SendResult | SkipResult;

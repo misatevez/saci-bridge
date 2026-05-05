@@ -4,7 +4,7 @@ import { transformContact } from '../src/transformers/contact.js';
 import { transformQuote } from '../src/transformers/quote.js';
 import { transformProduct } from '../src/transformers/product.js';
 import { transform } from '../src/transformers/index.js';
-import type { SaciCliente, SaciPedido } from '../src/transformers/types.js';
+import type { SaciCliente, SaciPedido, SkipResult } from '../src/transformers/types.js';
 
 describe('transformAccount', () => {
   it('maps account fields to SaciCliente', () => {
@@ -75,13 +75,51 @@ describe('transformContact', () => {
     const payload = result.payload as SaciCliente;
     expect(payload.phone).toBe('02-2222222');
   });
+
+  it('generates PATCH when saciId is provided', () => {
+    const result = transformContact(
+      { id: 'ctr-001', last_name: 'Pérez'},
+      'saci-contact-uuid-123',
+    );
+    expect(result.method).toBe('PATCH');
+    expect(result.endpoint).toBe('/clientes/saci-contact-uuid-123');
+  });
+
+  it('generates POST when saciId is null', () => {
+    const result = transformContact({ id: 'ctr-001', last_name: 'Pérez'},null);
+    expect(result.method).toBe('POST');
+    expect(result.endpoint).toBe('/clientes');
+  });
+
+  it('generates POST by default when saciId is undefined', () => {
+    const result = transformContact({ id: 'ctr-001', last_name: 'Pérez'});
+    expect(result.method).toBe('POST');
+    expect(result.endpoint).toBe('/clientes');
+  });
 });
 
 describe('transformQuote', () => {
-  it('maps quote to SaciPedido with details as array', () => {
+  it('skips quote with Draft approval_status', () => {
+    const result = transformQuote({ id: 'q-draft', approval_status: 'Draft', billing_account_name: 'X' });
+    expect('skip' in result).toBe(true);
+    expect((result as SkipResult).reason).toContain('Draft');
+  });
+
+  it('skips quote with no approval_status', () => {
+    const result = transformQuote({ id: 'q-no-status' });
+    expect('skip' in result).toBe(true);
+  });
+
+  it('skips quote with Rejected approval_status', () => {
+    const result = transformQuote({ id: 'q-rejected', approval_status: 'Rejected' });
+    expect('skip' in result).toBe(true);
+  });
+
+  it('syncs quote with approval_status=Approved', () => {
     const result = transformQuote({
       id: 'q-001',
       quote_num: 'QT-0042',
+      approval_status: 'Approved',
       date_quote_expected_closed: '2026-05-01',
       billing_account_name: 'Acme Corp',
       billing_address_street: 'Av. Principal 123',
@@ -96,8 +134,11 @@ describe('transformQuote', () => {
       ],
     });
 
-    expect(result.endpoint).toBe('/pedidos');
-    const payload = result.payload as SaciPedido;
+    expect('skip' in result).toBe(false);
+    expect('endpoint' in result).toBe(true);
+    const send = result as { endpoint: string; payload: SaciPedido };
+    expect(send.endpoint).toBe('/pedidos');
+    const payload = send.payload;
     expect(payload.idDoc).toBe('QT-0042');
     expect(payload.emissionDate).toBe('2026-05-01');
     expect(payload.socialReason).toBe('Acme Corp');
@@ -119,10 +160,56 @@ describe('transformQuote', () => {
     });
   });
 
-  it('handles missing line_items gracefully', () => {
-    const result = transformQuote({ id: 'q-empty', billing_account_name: 'X' });
-    const payload = result.payload as SaciPedido;
+  it('syncs quote with stage=Converted regardless of approval_status', () => {
+    const result = transformQuote({
+      id: 'q-conv',
+      stage: 'Converted',
+      billing_account_name: 'Converted Corp',
+      identification: 'RUC-001',
+      line_items: [],
+    });
+    expect('skip' in result).toBe(false);
+    const send = result as { endpoint: string; payload: SaciPedido };
+    expect(send.endpoint).toBe('/pedidos');
+    expect(send.payload.socialReason).toBe('Converted Corp');
+  });
+
+  it('includes line items as details[] in the pedido', () => {
+    const result = transformQuote({
+      id: 'q-items',
+      approval_status: 'Approved',
+      billing_account_name: 'Test Corp',
+      identification: 'RUC-002',
+      line_items: [
+        { sku: 'SKU-1', name: 'Product One', quantity: 3, unit_price: 25.5 },
+        { product_id: 'pid-2', name: 'Product Two', quantity: '2', unit_price: '100', total_amount: '200' },
+      ],
+    });
+    expect('skip' in result).toBe(false);
+    const payload = (result as { payload: SaciPedido }).payload;
+    expect(payload.details).toHaveLength(2);
+    expect(payload.details[0]).toEqual({ sku: 'SKU-1', nombre: 'Product One', cantidad: 3, precioUnitario: 25.5, total: 76.5 });
+    expect(payload.details[1]).toEqual({ sku: 'pid-2', nombre: 'Product Two', cantidad: 2, precioUnitario: 100, total: 200 });
+  });
+
+  it('handles missing line_items gracefully on Approved quote', () => {
+    const result = transformQuote({ id: 'q-empty', approval_status: 'Approved', billing_account_name: 'X' });
+    expect('skip' in result).toBe(false);
+    const payload = (result as { payload: SaciPedido }).payload;
     expect(payload.details).toEqual([]);
+  });
+
+  it('resolves account identification from payload when billing_account_id present', () => {
+    const result = transformQuote({
+      id: 'q-acct',
+      approval_status: 'Approved',
+      billing_account_id: 'acc-uuid-123',
+      billing_account_name: 'Account Corp',
+    });
+    expect('skip' in result).toBe(false);
+    const payload = (result as { payload: SaciPedido }).payload;
+    expect(payload.identification).toBe('acc-uuid-123');
+    expect(payload.socialReason).toBe('Account Corp');
   });
 });
 
@@ -150,6 +237,36 @@ describe('transformProduct', () => {
     const payload = result.payload as { estado: boolean };
     expect(payload.estado).toBe(false);
   });
+
+  it('generates PATCH when saciId is provided', () => {
+    const result = transformProduct({ id: 'prod-001', name: 'Widget' }, 'saci-prod-999');
+    expect(result.method).toBe('PATCH');
+    expect(result.endpoint).toBe('/productos/saci-prod-999');
+  });
+
+  it('generates POST when saciId is null', () => {
+    const result = transformProduct({ id: 'prod-001', name: 'Widget' }, null);
+    expect(result.method).toBe('POST');
+    expect(result.endpoint).toBe('/productos');
+  });
+
+  it('falls back to part_number when sku_saci_c missing', () => {
+    const result = transformProduct({ id: 'prod-002', name: 'Widget', part_number: 'PN-42' });
+    const payload = result.payload as { sku: string };
+    expect(payload.sku).toBe('PN-42');
+  });
+
+  it('falls back to id when both sku_saci_c and part_number missing', () => {
+    const result = transformProduct({ id: 'prod-003', name: 'Widget' });
+    const payload = result.payload as { sku: string };
+    expect(payload.sku).toBe('prod-003');
+  });
+
+  it('uses category_id over category', () => {
+    const result = transformProduct({ id: 'p', name: 'P', category: '001', category_id: '005' });
+    const payload = result.payload as { categoria: string };
+    expect(payload.categoria).toBe('005');
+  });
 });
 
 describe('transform registry', () => {
@@ -165,15 +282,30 @@ describe('transform registry', () => {
     expect(result.endpoint).toBe('/clientes');
   });
 
-  it('dispatches AOS_Quotes to transformQuote', () => {
-    const json = JSON.stringify({ id: 'x' });
+  it('dispatches AOS_Quotes to transformQuote (Approved → send)', () => {
+    const json = JSON.stringify({ id: 'x', approval_status: 'Approved' });
     const result = transform('AOS_Quotes', json);
-    expect(result.endpoint).toBe('/pedidos');
+    expect('skip' in result).toBe(false);
+    expect('endpoint' in result && (result as { endpoint: string }).endpoint).toBe('/pedidos');
   });
 
-  it('dispatches AOS_Products to transformProduct', () => {
+  it('dispatches AOS_Quotes to transformQuote (Draft → skip)', () => {
+    const json = JSON.stringify({ id: 'x', approval_status: 'Draft' });
+    const result = transform('AOS_Quotes', json);
+    expect('skip' in result).toBe(true);
+  });
+
+  it('dispatches AOS_Products to transformProduct (POST when no saciId)', () => {
     const json = JSON.stringify({ id: 'x', name: 'P' });
     const result = transform('AOS_Products', json);
     expect(result.endpoint).toBe('/productos');
+    expect(result.method).toBe('POST');
+  });
+
+  it('dispatches AOS_Products to transformProduct (PATCH when saciId provided)', () => {
+    const json = JSON.stringify({ id: 'x', name: 'P' });
+    const result = transform('AOS_Products', json, 'saci-123');
+    expect(result.endpoint).toBe('/productos/saci-123');
+    expect(result.method).toBe('PATCH');
   });
 });

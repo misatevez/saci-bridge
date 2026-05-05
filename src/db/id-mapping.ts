@@ -28,7 +28,7 @@ export async function getSaciId(module: string, firmasId: string): Promise<strin
 }
 
 /**
- * Look up the firmas ID for a given SaciERP record (reverse lookup).
+ * Look up the firmas record ID for a given SaciERP ID (reverse lookup for return-poller).
  * Returns null if no mapping exists.
  */
 export async function getFirmasId(module: string, saciId: string): Promise<string | null> {

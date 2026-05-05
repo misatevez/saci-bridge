@@ -4,7 +4,7 @@ CREATE TABLE IF NOT EXISTS saci_outbox (
   target_module VARCHAR(50)     NOT NULL,
   record_id     CHAR(36)        NOT NULL,
   payload_json  JSON            NOT NULL,
-  status        ENUM('pending','in_flight','sent','failed') NOT NULL DEFAULT 'pending',
+  status        ENUM('pending','in_flight','sent','failed','skipped') NOT NULL DEFAULT 'pending',
   retry_count   INT             NOT NULL DEFAULT 0,
   next_retry_at DATETIME        NULL,
   sent_at       DATETIME        NULL,
@@ -53,10 +53,18 @@ INSERT INTO saci_outbox (id, target_module, record_id, payload_json) VALUES (
   '{"id":"acc-001","name":"Empresa Test","email1":"test@empresa.ec","phone_office":"+593900000001","billing_address_street":"Calle Test 1","billing_address_city":"Quito","billing_address_country":"Ecuador","account_type":"RUC","sic_code":"1791234560001"}'
 );
 
--- E2E seed row: Quote
+-- E2E seed row: Quote (Approved — should sync)
 INSERT INTO saci_outbox (id, target_module, record_id, payload_json) VALUES (
   'e2e-quote-001',
   'AOS_Quotes',
   'q-001',
-  '{"id":"q-001","quote_num":"QT-E2E-001","date_quote_expected_closed":"2026-05-01","billing_account_name":"Empresa Test","billing_address_street":"Calle Test 1","billing_address_city":"Quito","billing_contact_email":"test@empresa.ec","billing_contact_phone":"+593900000001","identification_type":"RUC","identification":"1791234560001","line_items":[{"sku":"pro001","name":"Producto demo","quantity":2,"unit_price":100,"total_amount":200}]}'
+  '{"id":"q-001","quote_num":"QT-E2E-001","approval_status":"Approved","date_quote_expected_closed":"2026-05-01","billing_account_name":"Empresa Test","billing_address_street":"Calle Test 1","billing_address_city":"Quito","billing_contact_email":"test@empresa.ec","billing_contact_phone":"+593900000001","identification_type":"RUC","identification":"1791234560001","line_items":[{"sku":"pro001","name":"Producto demo","quantity":2,"unit_price":100,"total_amount":200}]}'
+);
+
+-- E2E seed row: Quote (Draft — should be skipped)
+INSERT INTO saci_outbox (id, target_module, record_id, payload_json) VALUES (
+  'e2e-quote-draft-001',
+  'AOS_Quotes',
+  'q-draft-001',
+  '{"id":"q-draft-001","quote_num":"QT-DRAFT-001","approval_status":"Draft","billing_account_name":"Empresa Test","identification_type":"RUC","identification":"1791234560001","line_items":[]}'
 );

@@ -3,7 +3,7 @@ import { config } from './config.js';
 import { logger } from './logger.js';
 import { getToken, stopTokenRefresh } from './auth.js';
 import { startPoller, stopPoller } from './poller/index.js';
-import { startReturnPoller, stopReturnPoller } from './return-poller/index.js';
+import { startReturnPoller, stopReturnPoller } from './return-poller.js';
 import { closeFirmasPool } from './db/firmas.js';
 import { closeLocalPool } from './db/local.js';
 

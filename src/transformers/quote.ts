@@ -12,6 +12,8 @@ export interface QuoteLineItem {
 export interface QuotePayload {
   id: string;
   quote_num?: string;
+  approval_status?: string;
+  stage?: string;
   date_quote_expected_closed?: string;
   date_entered?: string;
   billing_account_name?: string;
@@ -28,6 +30,8 @@ export interface QuotePayload {
   line_items?: QuoteLineItem[];
 }
 
+const SYNCABLE_STATUSES = new Set(['Approved', 'Converted']);
+
 function toNumber(v: number | string | undefined, fallback = 0): number {
   if (v === undefined || v === null) return fallback;
   const n = Number(v);
@@ -35,16 +39,23 @@ function toNumber(v: number | string | undefined, fallback = 0): number {
 }
 
 export function transformQuote(payload: QuotePayload): TransformResult {
+  const approvalStatus = payload.approval_status ?? '';
+  const stage = payload.stage ?? '';
+
+  if (!SYNCABLE_STATUSES.has(approvalStatus) && stage !== 'Converted') {
+    return { skip: true, reason: `approval_status=${approvalStatus || 'none'}, stage=${stage || 'none'}` };
+  }
+
   const emissionDate =
     payload.date_quote_expected_closed ??
     payload.date_entered ??
     new Date().toISOString().slice(0, 10);
 
   const socialReason =
-    payload.billing_account_name ??
+    (payload.billing_account_name ??
     [payload.billing_contact_first_name, payload.billing_contact_last_name]
       .filter(Boolean)
-      .join(' ') ??
+      .join(' ')) ||
     'Unknown';
 
   const address = [

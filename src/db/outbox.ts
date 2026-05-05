@@ -1,9 +1,9 @@
 import type { RowDataPacket, ResultSetHeader } from 'mysql2/promise';
 import { getFirmasPool } from './firmas.js';
 
-export type OutboxStatus = 'pending' | 'in_flight' | 'sent' | 'failed';
+export type OutboxStatus = 'pending' | 'in_flight' | 'sent' | 'failed' | 'skipped';
 
-export type OutboxModule = 'Accounts' | 'Contacts' | 'AOS_Products' | 'AOS_Quotes';
+export type OutboxModule = 'Accounts' | 'Contacts' | 'AOS_Products' | 'AOS_Quotes' | 'AOS_Invoices';
 
 export interface OutboxRow {
   id: string;
@@ -52,6 +52,14 @@ export async function markFailed(id: string): Promise<void> {
   const pool = getFirmasPool();
   await pool.execute<ResultSetHeader>(
     `UPDATE saci_outbox SET status = 'failed', updated_at = NOW() WHERE id = ?`,
+    [id],
+  );
+}
+
+export async function markSkipped(id: string): Promise<void> {
+  const pool = getFirmasPool();
+  await pool.execute<ResultSetHeader>(
+    `UPDATE saci_outbox SET status = 'skipped', updated_at = NOW() WHERE id = ?`,
     [id],
   );
 }

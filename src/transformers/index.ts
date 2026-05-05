@@ -5,7 +5,7 @@ import { transformContact } from './contact.js';
 import { transformQuote } from './quote.js';
 import { transformProduct } from './product.js';
 
-export type { TransformResult, SkipResult, SendResult } from './types.js';
+export type { TransformResult, SkipResult, SendResult, HandlerResult, HandlerDeps } from './types.js';
 
 export function transform(
   module: OutboxModule,
@@ -23,7 +23,7 @@ export function transform(
     case 'Contacts':
       return transformContact(payload as unknown as Parameters<typeof transformContact>[0], saciId);
     case 'AOS_Quotes':
-      return transformQuote(payload as unknown as Parameters<typeof transformQuote>[0]);
+      return transformQuote(payload as unknown as Parameters<typeof transformQuote>[0], saciId);
     case 'AOS_Products':
       return transformProduct(payload as unknown as Parameters<typeof transformProduct>[0]);
     default: {

@@ -5,6 +5,7 @@ import {
   markInFlight,
   markSent,
   markFailed,
+  markSkipped,
   incrementRetry,
 } from '../db/outbox.js';
 import { transform } from '../transformers/index.js';
@@ -43,6 +44,15 @@ async function processBatch(): Promise<void> {
         continue;
       }
 
+      if ('skip' in transformResult) {
+        await markSkipped(row.id);
+        logger.info(
+          { '[SACI-POLLER]': true, id: row.id, module: row.target_module, reason: transformResult.reason },
+          '[SACI-POLLER] Skipped',
+        );
+        continue;
+      }
+
       await markInFlight(row.id);
 
       const outcome = await postToSaci(row.id, transformResult.endpoint, transformResult.payload);
@@ -50,7 +60,7 @@ async function processBatch(): Promise<void> {
       if (outcome.ok) {
         await markSent(row.id);
         logger.info(
-          { '[SACI-POLLER]': true, id: row.id, module: row.target_module, endpoint: transformResult.endpoint },
+          { '[SACI-POLLER]': true, id: row.id, module: row.target_module, endpoint: transformResult.endpoint ?? '' },
           '[SACI-POLLER] Sent OK',
         );
         continue;

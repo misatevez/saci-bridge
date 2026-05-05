@@ -5,7 +5,7 @@ import { transformContact } from './contact.js';
 import { transformQuote } from './quote.js';
 import { transformProduct } from './product.js';
 
-export type { TransformResult } from './types.js';
+export type { TransformResult, SkipResult, SendResult } from './types.js';
 
 export function transform(module: OutboxModule, payloadJson: string): TransformResult {
   const payload = JSON.parse(payloadJson) as Record<string, unknown>;

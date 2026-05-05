@@ -25,7 +25,7 @@ export function transform(
     case 'AOS_Quotes':
       return transformQuote(payload as unknown as Parameters<typeof transformQuote>[0]);
     case 'AOS_Products':
-      return transformProduct(payload as unknown as Parameters<typeof transformProduct>[0]);
+      return transformProduct(payload as unknown as Parameters<typeof transformProduct>[0], saciId);
     default: {
       const _exhaustive: never = module;
       throw new Error(`Unknown module: ${_exhaustive}`);

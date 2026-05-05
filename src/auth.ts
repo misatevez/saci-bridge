@@ -82,6 +82,11 @@ export async function getToken(): Promise<string> {
   return cached.value;
 }
 
+/** Invalidate cached token (call after 401 responses). */
+export function invalidateToken(): void {
+  cached = null;
+}
+
 export function getLastTokenInfo(): { obtainedAt: number | null; expiresAt: number | null } {
   if (!cached) return { obtainedAt: null, expiresAt: null };
   return { obtainedAt: cached.obtainedAt, expiresAt: cached.expiresAt };

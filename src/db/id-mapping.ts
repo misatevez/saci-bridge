@@ -1,0 +1,45 @@
+import type { RowDataPacket, ResultSetHeader } from 'mysql2/promise';
+import { getLocalPool } from './local.js';
+
+export interface IdMapping {
+  firmas_id: string;
+  saci_id: string;
+  module: string;
+  created_at: Date;
+  updated_at: Date;
+}
+
+/**
+ * Look up the SaciERP ID for a given firmas record.
+ * Returns null if the record has never been synced.
+ */
+export async function getSaciId(module: string, firmasId: string): Promise<string | null> {
+  try {
+    const pool = getLocalPool();
+    const [rows] = await pool.execute<RowDataPacket[]>(
+      'SELECT saci_id FROM saci_id_mapping WHERE module = ? AND firmas_id = ?',
+      [module, firmasId],
+    );
+    return rows.length > 0 ? (rows[0]!['saci_id'] as string) : null;
+  } catch {
+    // Local DB might not be configured in all envs — fail open
+    return null;
+  }
+}
+
+/**
+ * Store or update the mapping between a firmas record ID and its SaciERP ID.
+ */
+export async function upsertMapping(module: string, firmasId: string, saciId: string): Promise<void> {
+  try {
+    const pool = getLocalPool();
+    await pool.execute<ResultSetHeader>(
+      `INSERT INTO saci_id_mapping (module, firmas_id, saci_id, created_at, updated_at)
+       VALUES (?, ?, ?, NOW(), NOW())
+       ON DUPLICATE KEY UPDATE saci_id = VALUES(saci_id), updated_at = NOW()`,
+      [module, firmasId, saciId],
+    );
+  } catch {
+    // Non-fatal: mapping is best-effort; next sync will re-create if missing
+  }
+}

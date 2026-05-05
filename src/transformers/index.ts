@@ -4,6 +4,7 @@ import { transformAccount } from './account.js';
 import { transformContact } from './contact.js';
 import { transformQuote } from './quote.js';
 import { transformProduct } from './product.js';
+import { transformInvoice } from './invoice.js';
 
 export type { TransformResult, SkipResult, SendResult } from './types.js';
 
@@ -26,6 +27,11 @@ export function transform(
       return transformQuote(payload as unknown as Parameters<typeof transformQuote>[0]);
     case 'AOS_Products':
       return transformProduct(payload as unknown as Parameters<typeof transformProduct>[0], saciId);
+    case 'AOS_Invoices':
+      return transformInvoice(
+        payload as unknown as Parameters<typeof transformInvoice>[0],
+        saciId,
+      );
     default: {
       const _exhaustive: never = module;
       throw new Error(`Unknown module: ${_exhaustive}`);

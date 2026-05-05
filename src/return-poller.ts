@@ -4,6 +4,7 @@ import { logger } from './logger.js';
 import { getToken } from './auth.js';
 import { getFirmasId } from './db/id-mapping.js';
 import { getFirmasPool } from './db/firmas.js';
+import { pollInvoices } from './return-poller/invoice-return.js';
 import type { ResultSetHeader } from 'mysql2/promise';
 
 const MODULE = 'AOS_Products';
@@ -141,6 +142,13 @@ async function poll(): Promise<void> {
     // error already logged in fetchSaciProductsModifiedSince
   } finally {
     running = false;
+  }
+
+  // Invoice return channel: runs independently of products poll
+  try {
+    await pollInvoices();
+  } catch (err) {
+    logger.error({ '[RETURN-POLLER]': true, err }, '[RETURN-POLLER] Invoice poll error');
   }
 }
 

@@ -36,7 +36,15 @@ export interface SaciProducto {
   estado: boolean;
 }
 
-export type SaciPayload = SaciCliente | SaciPedido | SaciProducto;
+export interface SaciV8Record {
+  data: {
+    type: string;
+    id?: string;
+    attributes: Record<string, unknown>;
+  };
+}
+
+export type SaciPayload = SaciCliente | SaciPedido | SaciProducto | SaciV8Record;
 
 export interface SendResult {
   endpoint: string;

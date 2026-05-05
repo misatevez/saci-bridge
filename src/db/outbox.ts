@@ -3,7 +3,7 @@ import { getFirmasPool } from './firmas.js';
 
 export type OutboxStatus = 'pending' | 'in_flight' | 'sent' | 'failed' | 'skipped';
 
-export type OutboxModule = 'Accounts' | 'Contacts' | 'AOS_Products' | 'AOS_Quotes';
+export type OutboxModule = 'Accounts' | 'Contacts' | 'AOS_Products' | 'AOS_Quotes' | 'AOS_Invoices';
 
 export interface OutboxRow {
   id: string;

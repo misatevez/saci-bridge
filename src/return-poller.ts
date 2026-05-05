@@ -8,7 +8,7 @@ import { pollInvoices } from './return-poller/invoice-return.js';
 import type { ResultSetHeader } from 'mysql2/promise';
 
 const MODULE = 'AOS_Products';
-const FIELDS = ['name', 'price', 'qty_in_stock', 'sku_saci_c', 'date_modified'];
+const FIELDS = ['name', 'price', 'sku_saci_c', 'date_modified'];
 
 let running = false;
 let timer: ReturnType<typeof setTimeout> | null = null;

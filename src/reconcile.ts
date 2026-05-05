@@ -50,18 +50,18 @@ const MODULE_CONFIGS: Record<ModuleName, ModuleConfig> = {
     },
   },
   AOS_Quotes: {
-    fields: ['name', 'quote_num', 'external_id_c'],
+    fields: ['name', 'number', 'external_id_c'],
     businessKey: (r) => {
       const a = r.attributes;
-      const key = a['quote_num'] ? normalize(a['quote_num']) : normalize(a['name']);
+      const key = a['number'] ? normalize(a['number']) : normalize(a['name']);
       return key;
     },
   },
   AOS_Invoices: {
-    fields: ['name', 'invoice_num', 'external_id_c'],
+    fields: ['name', 'number', 'external_id_c'],
     businessKey: (r) => {
       const a = r.attributes;
-      const key = a['invoice_num'] ? normalize(a['invoice_num']) : normalize(a['name']);
+      const key = a['number'] ? normalize(a['number']) : normalize(a['name']);
       return key;
     },
   },

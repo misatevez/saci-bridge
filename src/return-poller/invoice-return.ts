@@ -9,18 +9,16 @@ import { getLastPollTime, setLastPollTime } from '../db/return-state.js';
 import axios, { isAxiosError } from 'axios';
 
 const MODULE = 'AOS_Invoices';
-const FIELDS = 'name,invoice_num,billing_account_id,aos_quotes_id,total_amount,status,date_due,date_modified,date_entered';
+const FIELDS = 'name,billing_account_id,total_amount,status,due_date,date_modified,date_entered';
 
 interface SaciInvoice {
   id: string;
   attributes: {
     name?: string;
-    invoice_num?: string | number;
     billing_account_id?: string;
-    aos_quotes_id?: string;
     total_amount?: string | number;
     status?: string;
-    date_due?: string;
+    due_date?: string;
     date_modified?: string;
     date_entered?: string;
   };
@@ -120,7 +118,7 @@ async function upsertInvoiceInFirmas(invoice: SaciInvoice): Promise<void> {
   // Create new invoice in firmas
   const [billingAccountId, quoteId] = await Promise.all([
     resolveAccountId(attrs.billing_account_id),
-    resolveQuoteId(attrs.aos_quotes_id),
+    resolveQuoteId(undefined),
   ]);
 
   const newId = randomUUID();
@@ -146,8 +144,8 @@ async function createInvoice(
   // Write directly to DB — bypasses after_save hooks to prevent outbox loop
   await pool.execute<ResultSetHeader>(
     `INSERT INTO AOS_Invoices
-       (id, name, billing_account_id, aos_quotes_id, total_amount, total_amount_usdollar,
-        status, date_due, currency_id, date_entered, date_modified,
+       (id, name, billing_account_id,  total_amount, total_amount_usdollar,
+        status, due_date, currency_id, date_entered, date_modified,
         created_by, modified_user_id, deleted)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, '-99', ?, ?, '1', '1', 0)`,
     [
@@ -158,7 +156,7 @@ async function createInvoice(
       toDecimal(attrs.total_amount),
       toDecimal(attrs.total_amount),
       attrs.status ?? 'Draft',
-      attrs.date_due ?? null,
+      attrs.due_date ?? null,
       attrs.date_entered ? new Date(attrs.date_entered) : now,
       now,
     ],

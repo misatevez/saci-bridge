@@ -7,7 +7,9 @@ export interface Config {
   logLevel: string;
   saciErp: {
     apiUrl: string;
-    apiToken: string;
+    tokenUrl: string;
+    clientId: string;
+    clientSecret: string;
   };
   suitecrm: {
     baseUrl: string;
@@ -59,8 +61,10 @@ export function loadConfig(): Config {
     host: readEnv('HOST', '127.0.0.1'),
     logLevel: readEnv('LOG_LEVEL', 'info'),
     saciErp: {
-      apiUrl: readEnv('SACIERP_API_URL', 'http://localhost/saci_api_mock/'),
-      apiToken: readEnv('SACIERP_API_TOKEN'),
+      apiUrl: readEnv('SACIERP_API_URL', 'https://sacierp.moacrm.com/legacy/Api/V8'),
+      tokenUrl: readEnv('SACIERP_TOKEN_URL', 'https://sacierp.moacrm.com/legacy/Api/access_token'),
+      clientId: readEnv('SACIERP_CLIENT_ID'),
+      clientSecret: readEnv('SACIERP_CLIENT_SECRET'),
     },
     suitecrm: {
       baseUrl: readEnv('SUITECRM_BASE_URL', 'https://firmas.moacrm.com'),

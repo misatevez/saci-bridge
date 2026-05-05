@@ -1,6 +1,7 @@
 import axios, { type AxiosResponse, isAxiosError } from 'axios';
 import { config } from './config.js';
 import { logger } from './logger.js';
+import { getToken } from './auth.js';
 import type { SaciPayload } from './transformers/types.js';
 
 export type HttpOutcome =
@@ -10,13 +11,14 @@ export type HttpOutcome =
 
 const TIMEOUT_MS = 10_000;
 
-function buildClient() {
+async function buildClient() {
+  const token = await getToken();
   return axios.create({
     baseURL: config.saciErp.apiUrl,
     timeout: TIMEOUT_MS,
     headers: {
       'Content-Type': 'application/json',
-      Authorization: `Bearer ${config.saciErp.apiToken}`,
+      Authorization: `Bearer ${token}`,
     },
   });
 }
@@ -26,7 +28,7 @@ export async function postToSaci(
   endpoint: string,
   payload: SaciPayload,
 ): Promise<HttpOutcome> {
-  const client = buildClient();
+  const client = await buildClient();
 
   try {
     const res: AxiosResponse = await client.post(endpoint, payload, {

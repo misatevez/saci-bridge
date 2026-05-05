@@ -5,6 +5,7 @@ import {
   markInFlight,
   markSent,
   markFailed,
+  markSkipped,
   incrementRetry,
 } from '../db/outbox.js';
 import { getSaciId, upsertMapping } from '../db/id-mapping.js';
@@ -32,6 +33,15 @@ async function processRow(row: Awaited<ReturnType<typeof fetchPendingRows>>[numb
       '[SACI-POLLER] Transform error — marking failed',
     );
     await markFailed(row.id);
+    return;
+  }
+
+  if ('skip' in transformResult) {
+    await markSkipped(row.id);
+    logger.info(
+      { '[SACI-POLLER]': true, id: row.id, module: row.target_module, reason: transformResult.reason },
+      '[SACI-POLLER] Skipped',
+    );
     return;
   }
 

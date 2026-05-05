@@ -38,8 +38,15 @@ export interface SaciProducto {
 
 export type SaciPayload = SaciCliente | SaciPedido | SaciProducto;
 
-export interface TransformResult {
+export interface SendResult {
   endpoint: string;
   method: 'POST' | 'PATCH';
   payload: SaciPayload;
 }
+
+export interface SkipResult {
+  skip: true;
+  reason: string;
+}
+
+export type TransformResult = SendResult | SkipResult;

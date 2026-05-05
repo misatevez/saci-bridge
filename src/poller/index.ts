@@ -20,19 +20,19 @@ let timer: ReturnType<typeof setTimeout> | null = null;
 
 async function processRow(row: Awaited<ReturnType<typeof fetchPendingRows>>[number]): Promise<void> {
   logger.info(
-    { '[SACI-POLLER]': true, id: row.id, module: row.target_module, recordId: row.record_id },
+    { '[SACI-POLLER]': true, id: row.id, module: row.module, recordId: row.record_id },
     '[SACI-POLLER] Processing',
   );
 
   // Look up existing SaciERP ID to decide POST vs PATCH
-  const saciId = await getSaciId(row.target_module, row.record_id);
+  const saciId = await getSaciId(row.module, row.record_id);
 
   let transformResult;
   try {
-    transformResult = transform(row.target_module, row.payload_json, saciId);
+    transformResult = transform(row.module, row.payload, saciId);
   } catch (err) {
     logger.error(
-      { '[SACI-POLLER]': true, id: row.id, module: row.target_module, err },
+      { '[SACI-POLLER]': true, id: row.id, module: row.module, err },
       '[SACI-POLLER] Transform error — marking failed',
     );
     await markFailed(row.id);
@@ -42,7 +42,7 @@ async function processRow(row: Awaited<ReturnType<typeof fetchPendingRows>>[numb
   if ('skip' in transformResult) {
     await markSkipped(row.id);
     logger.info(
-      { '[SACI-POLLER]': true, id: row.id, module: row.target_module, reason: transformResult.reason },
+      { '[SACI-POLLER]': true, id: row.id, module: row.module, reason: transformResult.reason },
       '[SACI-POLLER] Skipped',
     );
     return;
@@ -67,13 +67,13 @@ async function processRow(row: Awaited<ReturnType<typeof fetchPendingRows>>[numb
     if (result.ok) {
       await markSent(row.id);
       logger.info(
-        { '[SACI-POLLER]': true, id: row.id, module: row.target_module },
+        { '[SACI-POLLER]': true, id: row.id, module: row.module },
         '[SACI-POLLER] Handler OK',
       );
     } else {
       await markFailed(row.id);
       logger.error(
-        { '[SACI-POLLER]': true, id: row.id, module: row.target_module },
+        { '[SACI-POLLER]': true, id: row.id, module: row.module },
         '[SACI-POLLER] Handler failed — marking failed',
       );
     }
@@ -100,7 +100,7 @@ async function processRow(row: Awaited<ReturnType<typeof fetchPendingRows>>[numb
         (body['idPedido'] as string | undefined) ??
         (body['id'] as string | undefined);
       if (returnedId) {
-        await upsertMapping(row.target_module, row.record_id, returnedId);
+        await upsertMapping(row.module, row.record_id, returnedId);
       }
     }
 
@@ -108,7 +108,7 @@ async function processRow(row: Awaited<ReturnType<typeof fetchPendingRows>>[numb
       {
         '[SACI-POLLER]': true,
         id: row.id,
-        module: row.target_module,
+        module: row.module,
         method: transformResult.method,
         endpoint: transformResult.endpoint,
       },
@@ -127,7 +127,7 @@ async function processRow(row: Awaited<ReturnType<typeof fetchPendingRows>>[numb
   }
 
   // Retryable (5xx / network error)
-  const newRetryCount = row.retry_count + 1;
+  const newRetryCount = row.attempts + 1;
   if (newRetryCount > config.poller.maxRetries) {
     await markFailed(row.id);
     logger.error(

@@ -4,6 +4,8 @@ import { logger } from './logger.js';
 import { getToken, invalidateToken } from './auth.js';
 import type { SaciPayload } from './transformers/types.js';
 
+export type { SaciPayload };
+
 export type HttpMethod = 'POST' | 'PATCH';
 
 export type HttpOutcome =
@@ -29,7 +31,7 @@ export async function callSaci(
   outboxId: string,
   method: HttpMethod,
   endpoint: string,
-  payload: SaciPayload,
+  payload: SaciPayload | unknown,
 ): Promise<HttpOutcome> {
   const client = await buildClient();
 

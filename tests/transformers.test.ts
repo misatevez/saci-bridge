@@ -4,7 +4,7 @@ import { transformContact } from '../src/transformers/contact.js';
 import { transformQuote } from '../src/transformers/quote.js';
 import { transformProduct } from '../src/transformers/product.js';
 import { transform } from '../src/transformers/index.js';
-import type { SaciCliente, SaciPedido, SkipResult } from '../src/transformers/types.js';
+import type { SaciCliente, SkipResult, HandlerResult } from '../src/transformers/types.js';
 
 describe('transformAccount', () => {
   it('maps account fields to SaciCliente', () => {
@@ -115,101 +115,30 @@ describe('transformQuote', () => {
     expect('skip' in result).toBe(true);
   });
 
-  it('syncs quote with approval_status=Approved', () => {
+  it('returns HandlerResult for Approved quote', () => {
     const result = transformQuote({
       id: 'q-001',
       quote_num: 'QT-0042',
       approval_status: 'Approved',
-      date_quote_expected_closed: '2026-05-01',
-      billing_account_name: 'Acme Corp',
-      billing_address_street: 'Av. Principal 123',
-      billing_address_city: 'Quito',
-      billing_contact_email: 'info@acme.com',
-      billing_contact_phone: '+593999000001',
-      identification_type: 'RUC',
-      identification: '1791234567001',
-      line_items: [
-        { name: 'Widget A', quantity: 2, unit_price: 50, sku: 'WGT-A', total_amount: 100 },
-        { name: 'Widget B', quantity: 1, unit_price: 200, sku: 'WGT-B' },
-      ],
     });
-
     expect('skip' in result).toBe(false);
-    expect('endpoint' in result).toBe(true);
-    const send = result as { endpoint: string; payload: SaciPedido };
-    expect(send.endpoint).toBe('/pedidos');
-    const payload = send.payload;
-    expect(payload.idDoc).toBe('QT-0042');
-    expect(payload.emissionDate).toBe('2026-05-01');
-    expect(payload.socialReason).toBe('Acme Corp');
-    expect(Array.isArray(payload.details)).toBe(true);
-    expect(payload.details).toHaveLength(2);
-    expect(payload.details[0]).toEqual({
-      sku: 'WGT-A',
-      nombre: 'Widget A',
-      cantidad: 2,
-      precioUnitario: 50,
-      total: 100,
-    });
-    expect(payload.details[1]).toEqual({
-      sku: 'WGT-B',
-      nombre: 'Widget B',
-      cantidad: 1,
-      precioUnitario: 200,
-      total: 200,
-    });
+    expect('handle' in result).toBe(true);
+    expect(typeof (result as HandlerResult).handle).toBe('function');
   });
 
-  it('syncs quote with stage=Converted regardless of approval_status', () => {
+  it('returns HandlerResult for Converted stage quote', () => {
     const result = transformQuote({
       id: 'q-conv',
       stage: 'Converted',
-      billing_account_name: 'Converted Corp',
-      identification: 'RUC-001',
-      line_items: [],
     });
     expect('skip' in result).toBe(false);
-    const send = result as { endpoint: string; payload: SaciPedido };
-    expect(send.endpoint).toBe('/pedidos');
-    expect(send.payload.socialReason).toBe('Converted Corp');
+    expect('handle' in result).toBe(true);
   });
 
-  it('includes line items as details[] in the pedido', () => {
-    const result = transformQuote({
-      id: 'q-items',
-      approval_status: 'Approved',
-      billing_account_name: 'Test Corp',
-      identification: 'RUC-002',
-      line_items: [
-        { sku: 'SKU-1', name: 'Product One', quantity: 3, unit_price: 25.5 },
-        { product_id: 'pid-2', name: 'Product Two', quantity: '2', unit_price: '100', total_amount: '200' },
-      ],
-    });
+  it('returns HandlerResult for delete event regardless of approval_status', () => {
+    const result = transformQuote({ id: 'q-del', event_type: 'delete' });
     expect('skip' in result).toBe(false);
-    const payload = (result as { payload: SaciPedido }).payload;
-    expect(payload.details).toHaveLength(2);
-    expect(payload.details[0]).toEqual({ sku: 'SKU-1', nombre: 'Product One', cantidad: 3, precioUnitario: 25.5, total: 76.5 });
-    expect(payload.details[1]).toEqual({ sku: 'pid-2', nombre: 'Product Two', cantidad: 2, precioUnitario: 100, total: 200 });
-  });
-
-  it('handles missing line_items gracefully on Approved quote', () => {
-    const result = transformQuote({ id: 'q-empty', approval_status: 'Approved', billing_account_name: 'X' });
-    expect('skip' in result).toBe(false);
-    const payload = (result as { payload: SaciPedido }).payload;
-    expect(payload.details).toEqual([]);
-  });
-
-  it('resolves account identification from payload when billing_account_id present', () => {
-    const result = transformQuote({
-      id: 'q-acct',
-      approval_status: 'Approved',
-      billing_account_id: 'acc-uuid-123',
-      billing_account_name: 'Account Corp',
-    });
-    expect('skip' in result).toBe(false);
-    const payload = (result as { payload: SaciPedido }).payload;
-    expect(payload.identification).toBe('acc-uuid-123');
-    expect(payload.socialReason).toBe('Account Corp');
+    expect('handle' in result).toBe(true);
   });
 });
 
@@ -282,11 +211,12 @@ describe('transform registry', () => {
     expect(result.endpoint).toBe('/clientes');
   });
 
-  it('dispatches AOS_Quotes to transformQuote (Approved → send)', () => {
+  it('dispatches AOS_Quotes to transformQuote (Approved → HandlerResult)', () => {
     const json = JSON.stringify({ id: 'x', approval_status: 'Approved' });
     const result = transform('AOS_Quotes', json);
     expect('skip' in result).toBe(false);
-    expect('endpoint' in result && (result as { endpoint: string }).endpoint).toBe('/pedidos');
+    expect('handle' in result).toBe(true);
+    expect(typeof (result as HandlerResult).handle).toBe('function');
   });
 
   it('dispatches AOS_Quotes to transformQuote (Draft → skip)', () => {

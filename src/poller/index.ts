@@ -9,8 +9,11 @@ import {
   incrementRetry,
 } from '../db/outbox.js';
 import { getSaciId, upsertMapping } from '../db/id-mapping.js';
+import { getFirmasPool } from '../db/firmas.js';
 import { transform } from '../transformers/index.js';
+import type { HandlerDeps } from '../transformers/index.js';
 import { callSaci, computeNextRetry } from '../saci-client.js';
+import type { RowDataPacket } from 'mysql2/promise';
 
 let running = false;
 let timer: ReturnType<typeof setTimeout> | null = null;
@@ -42,6 +45,38 @@ async function processRow(row: Awaited<ReturnType<typeof fetchPendingRows>>[numb
       { '[SACI-POLLER]': true, id: row.id, module: row.target_module, reason: transformResult.reason },
       '[SACI-POLLER] Skipped',
     );
+    return;
+  }
+
+  // HandlerResult — multi-step handler (e.g. AOS_Quotes with line items)
+  if ('handle' in transformResult) {
+    await markInFlight(row.id);
+    const deps: HandlerDeps = {
+      getSaciId,
+      upsertMapping,
+      callSaci: (outboxId, method, endpoint, payload) =>
+        callSaci(outboxId, method, endpoint, payload as Parameters<typeof callSaci>[3]),
+      queryFirmas: async <T = Record<string, unknown>>(sql: string, params: unknown[]) => {
+        const pool = getFirmasPool();
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const [rows] = await pool.execute<RowDataPacket[]>(sql, params as any[]);
+        return rows as T[];
+      },
+    };
+    const result = await transformResult.handle(row.id, deps);
+    if (result.ok) {
+      await markSent(row.id);
+      logger.info(
+        { '[SACI-POLLER]': true, id: row.id, module: row.target_module },
+        '[SACI-POLLER] Handler OK',
+      );
+    } else {
+      await markFailed(row.id);
+      logger.error(
+        { '[SACI-POLLER]': true, id: row.id, module: row.target_module },
+        '[SACI-POLLER] Handler failed — marking failed',
+      );
+    }
     return;
   }
 

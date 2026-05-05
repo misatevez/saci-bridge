@@ -57,4 +57,16 @@ export interface SkipResult {
   reason: string;
 }
 
-export type TransformResult = SendResult | SkipResult;
+/** Dependency surface injected by the poller into complex multi-step handlers. */
+export interface HandlerDeps {
+  getSaciId(module: string, firmasId: string): Promise<string | null>;
+  upsertMapping(module: string, firmasId: string, saciId: string): Promise<void>;
+  callSaci(outboxId: string, method: 'POST' | 'PATCH', endpoint: string, payload: unknown): Promise<{ ok: boolean; status?: number | null; body?: unknown }>;
+  queryFirmas<T = Record<string, unknown>>(sql: string, params: unknown[]): Promise<T[]>;
+}
+
+export interface HandlerResult {
+  handle(outboxId: string, deps: HandlerDeps): Promise<{ ok: boolean }>;
+}
+
+export type TransformResult = SendResult | SkipResult | HandlerResult;

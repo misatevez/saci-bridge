@@ -150,6 +150,36 @@ describe('transformProduct', () => {
     const payload = result.payload as { estado: boolean };
     expect(payload.estado).toBe(false);
   });
+
+  it('generates PATCH when saciId is provided', () => {
+    const result = transformProduct({ id: 'prod-001', name: 'Widget' }, 'saci-prod-999');
+    expect(result.method).toBe('PATCH');
+    expect(result.endpoint).toBe('/productos/saci-prod-999');
+  });
+
+  it('generates POST when saciId is null', () => {
+    const result = transformProduct({ id: 'prod-001', name: 'Widget' }, null);
+    expect(result.method).toBe('POST');
+    expect(result.endpoint).toBe('/productos');
+  });
+
+  it('falls back to part_number when sku_saci_c missing', () => {
+    const result = transformProduct({ id: 'prod-002', name: 'Widget', part_number: 'PN-42' });
+    const payload = result.payload as { sku: string };
+    expect(payload.sku).toBe('PN-42');
+  });
+
+  it('falls back to id when both sku_saci_c and part_number missing', () => {
+    const result = transformProduct({ id: 'prod-003', name: 'Widget' });
+    const payload = result.payload as { sku: string };
+    expect(payload.sku).toBe('prod-003');
+  });
+
+  it('uses category_id over category', () => {
+    const result = transformProduct({ id: 'p', name: 'P', category: '001', category_id: '005' });
+    const payload = result.payload as { categoria: string };
+    expect(payload.categoria).toBe('005');
+  });
 });
 
 describe('transform registry', () => {
@@ -171,9 +201,17 @@ describe('transform registry', () => {
     expect(result.endpoint).toBe('/pedidos');
   });
 
-  it('dispatches AOS_Products to transformProduct', () => {
+  it('dispatches AOS_Products to transformProduct (POST when no saciId)', () => {
     const json = JSON.stringify({ id: 'x', name: 'P' });
     const result = transform('AOS_Products', json);
     expect(result.endpoint).toBe('/productos');
+    expect(result.method).toBe('POST');
+  });
+
+  it('dispatches AOS_Products to transformProduct (PATCH when saciId provided)', () => {
+    const json = JSON.stringify({ id: 'x', name: 'P' });
+    const result = transform('AOS_Products', json, 'saci-123');
+    expect(result.endpoint).toBe('/productos/saci-123');
+    expect(result.method).toBe('PATCH');
   });
 });

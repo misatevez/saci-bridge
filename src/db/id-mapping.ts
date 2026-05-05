@@ -28,6 +28,23 @@ export async function getSaciId(module: string, firmasId: string): Promise<strin
 }
 
 /**
+ * Look up the firmas record ID for a given SaciERP ID (reverse lookup for return-poller).
+ * Returns null if no mapping exists.
+ */
+export async function getFirmasId(module: string, saciId: string): Promise<string | null> {
+  try {
+    const pool = getLocalPool();
+    const [rows] = await pool.execute<RowDataPacket[]>(
+      'SELECT firmas_id FROM saci_id_mapping WHERE module = ? AND saci_id = ?',
+      [module, saciId],
+    );
+    return rows.length > 0 ? (rows[0]!['firmas_id'] as string) : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Store or update the mapping between a firmas record ID and its SaciERP ID.
  */
 export async function upsertMapping(module: string, firmasId: string, saciId: string): Promise<void> {

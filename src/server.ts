@@ -1,6 +1,7 @@
 import { createApp } from './app.js';
 import { config } from './config.js';
 import { logger } from './logger.js';
+import { getToken, stopTokenRefresh } from './auth.js';
 import { startPoller, stopPoller } from './poller/index.js';
 import { closeFirmasPool } from './db/firmas.js';
 import { closeLocalPool } from './db/local.js';
@@ -13,13 +14,20 @@ const server = app.listen(config.port, config.host, () => {
     'saci-bridge listening',
   );
   if (config.nodeEnv !== 'test') {
-    startPoller();
+    getToken()
+      .then(() => {
+        startPoller();
+      })
+      .catch((err: unknown) => {
+        logger.error({ err }, 'Failed to obtain initial SaciERP token — poller not started');
+      });
   }
 });
 
 function shutdown(signal: string): void {
   logger.info({ signal }, 'shutting down');
   stopPoller();
+  stopTokenRefresh();
   server.close(async (err) => {
     await Promise.all([closeFirmasPool(), closeLocalPool()]);
     if (err) {

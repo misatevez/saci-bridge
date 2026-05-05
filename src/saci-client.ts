@@ -1,7 +1,7 @@
 import axios, { type AxiosResponse, isAxiosError } from 'axios';
 import { config } from './config.js';
 import { logger } from './logger.js';
-import { getSaciToken, invalidateToken } from './auth.js';
+import { getToken, invalidateToken } from './auth.js';
 import type { SaciPayload } from './transformers/types.js';
 
 export type HttpMethod = 'POST' | 'PATCH';
@@ -14,7 +14,7 @@ export type HttpOutcome =
 const TIMEOUT_MS = 10_000;
 
 async function buildClient() {
-  const token = await getSaciToken();
+  const token = await getToken();
   return axios.create({
     baseURL: config.saciErp.apiUrl,
     timeout: TIMEOUT_MS,

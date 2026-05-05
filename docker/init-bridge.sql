@@ -8,3 +8,10 @@ CREATE TABLE IF NOT EXISTS saci_id_mapping (
   PRIMARY KEY (module, firmas_id),
   INDEX idx_saci_id (module, saci_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Return poller: tracks last successful poll timestamp per module
+CREATE TABLE IF NOT EXISTS saci_return_state (
+  module        VARCHAR(50) NOT NULL PRIMARY KEY,
+  last_poll_at  DATETIME    NOT NULL,
+  updated_at    DATETIME    NOT NULL DEFAULT NOW() ON UPDATE NOW()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

@@ -14,8 +14,35 @@ CREATE TABLE IF NOT EXISTS saci_outbox (
   INDEX idx_created_at (created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- AOS_Invoices: minimal schema for return-poller tests
+CREATE TABLE IF NOT EXISTS AOS_Invoices (
+  id                      CHAR(36)       NOT NULL PRIMARY KEY,
+  name                    VARCHAR(255)   DEFAULT NULL,
+  billing_account_id      CHAR(36)       DEFAULT NULL,
+  aos_quotes_id           CHAR(36)       DEFAULT NULL,
+  total_amount            DECIMAL(26,6)  DEFAULT 0.000000,
+  total_amount_usdollar   DECIMAL(26,6)  DEFAULT 0.000000,
+  currency_id             CHAR(36)       DEFAULT '-99',
+  status                  VARCHAR(25)    DEFAULT 'Draft',
+  date_due                DATE           DEFAULT NULL,
+  date_entered            DATETIME       DEFAULT NULL,
+  date_modified           DATETIME       DEFAULT NULL,
+  created_by              CHAR(36)       DEFAULT '1',
+  modified_user_id        CHAR(36)       DEFAULT '1',
+  deleted                 TINYINT(1)     NOT NULL DEFAULT 0,
+  INDEX idx_billing_account (billing_account_id),
+  INDEX idx_quote (aos_quotes_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS AOS_Invoices_cstm (
+  id_c           CHAR(36)     NOT NULL PRIMARY KEY,
+  external_id_c  VARCHAR(255) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 -- Grant read+write to saci_bridge_reader on saci_outbox only
 GRANT SELECT, UPDATE ON firmascrm.saci_outbox TO 'saci_bridge_reader'@'%';
+GRANT SELECT, INSERT, UPDATE ON firmascrm.AOS_Invoices TO 'saci_bridge_reader'@'%';
+GRANT SELECT, INSERT, UPDATE ON firmascrm.AOS_Invoices_cstm TO 'saci_bridge_reader'@'%';
 FLUSH PRIVILEGES;
 
 -- E2E seed row: Account

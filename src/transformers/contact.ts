@@ -14,7 +14,10 @@ export interface ContactPayload {
   identification?: string;
 }
 
-export function transformContact(payload: ContactPayload): TransformResult {
+/**
+ * @param saciId - Existing SaciERP client ID; when provided, generates a PATCH request.
+ */
+export function transformContact(payload: ContactPayload, saciId?: string | null): TransformResult {
   const fullName = [payload.first_name, payload.last_name].filter(Boolean).join(' ');
 
   const address = [
@@ -34,5 +37,8 @@ export function transformContact(payload: ContactPayload): TransformResult {
     address: address || undefined,
   };
 
+  if (saciId) {
+    return { endpoint: `/clientes/${saciId}`, method: 'PATCH', payload: cliente };
+  }
   return { endpoint: '/clientes', method: 'POST', payload: cliente };
 }

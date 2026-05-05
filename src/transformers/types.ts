@@ -40,7 +40,7 @@ export type SaciPayload = SaciCliente | SaciPedido | SaciProducto;
 
 export interface SendResult {
   endpoint: string;
-  method: 'POST';
+  method: 'POST' | 'PATCH';
   payload: SaciPayload;
 }
 

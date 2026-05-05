@@ -21,7 +21,7 @@ export function transform(
         saciId,
       );
     case 'Contacts':
-      return transformContact(payload as unknown as Parameters<typeof transformContact>[0]);
+      return transformContact(payload as unknown as Parameters<typeof transformContact>[0], saciId);
     case 'AOS_Quotes':
       return transformQuote(payload as unknown as Parameters<typeof transformQuote>[0]);
     case 'AOS_Products':

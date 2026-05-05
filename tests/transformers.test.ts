@@ -75,6 +75,27 @@ describe('transformContact', () => {
     const payload = result.payload as SaciCliente;
     expect(payload.phone).toBe('02-2222222');
   });
+
+  it('generates PATCH when saciId is provided', () => {
+    const result = transformContact(
+      { id: 'ctr-001', last_name: 'Pérez'},
+      'saci-contact-uuid-123',
+    );
+    expect(result.method).toBe('PATCH');
+    expect(result.endpoint).toBe('/clientes/saci-contact-uuid-123');
+  });
+
+  it('generates POST when saciId is null', () => {
+    const result = transformContact({ id: 'ctr-001', last_name: 'Pérez'},null);
+    expect(result.method).toBe('POST');
+    expect(result.endpoint).toBe('/clientes');
+  });
+
+  it('generates POST by default when saciId is undefined', () => {
+    const result = transformContact({ id: 'ctr-001', last_name: 'Pérez'});
+    expect(result.method).toBe('POST');
+    expect(result.endpoint).toBe('/clientes');
+  });
 });
 
 describe('transformQuote', () => {

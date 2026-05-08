@@ -19,15 +19,15 @@ export interface OutboxRow {
 
 export async function fetchPendingRows(batchSize: number): Promise<OutboxRow[]> {
   const pool = getFirmasPool();
-  const [rows] = await pool.execute<RowDataPacket[]>(
+  const limit = Number(batchSize);
+  const [rows] = await pool.query<RowDataPacket[]>(
     `SELECT id, module, record_id, payload, status, attempts,
             next_attempt_at, sent_at, created_at
      FROM saci_outbox
      WHERE status = 'pending'
        AND (next_attempt_at IS NULL OR next_attempt_at <= NOW())
      ORDER BY created_at ASC
-     LIMIT ?`,
-    [batchSize],
+     LIMIT ${limit}`,
   );
   return rows as OutboxRow[];
 }

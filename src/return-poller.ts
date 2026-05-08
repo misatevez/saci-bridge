@@ -96,7 +96,7 @@ async function processSaciProducts(products: SaciV8Record[]): Promise<void> {
       continue;
     }
 
-    const stock = attrs['qty_in_stock'] != null ? Number(attrs['qty_in_stock']) : null;
+    const stock: number | null = null;
     const price = attrs['price'] != null ? Number(attrs['price']) : null;
 
     try {

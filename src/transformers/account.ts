@@ -1,4 +1,4 @@
-import type { SaciCliente, TransformResult } from './types.js';
+import type { SaciV8Record, TransformResult } from './types.js';
 
 export interface AccountPayload {
   id: string;
@@ -12,29 +12,23 @@ export interface AccountPayload {
   sic_code?: string;
 }
 
-/**
- * @param saciId - Existing SaciERP client ID; when provided, generates a PATCH request.
- */
 export function transformAccount(payload: AccountPayload, saciId?: string | null): TransformResult {
-  const address = [
-    payload.billing_address_street,
-    payload.billing_address_city,
-    payload.billing_address_country,
-  ]
-    .filter(Boolean)
-    .join(', ');
+  const attributes: Record<string, unknown> = { name: payload.name };
 
-  const cliente: SaciCliente = {
-    identificationType: payload.account_type ?? 'RUC',
-    identification: payload.sic_code ?? payload.id,
-    socialReason: payload.name,
-    email: payload.email1,
-    phone: payload.phone_office,
-    address: address || undefined,
-  };
+  if (payload.billing_address_street) attributes.billing_address_street = payload.billing_address_street;
+  if (payload.billing_address_city) attributes.billing_address_city = payload.billing_address_city;
+  if (payload.billing_address_country) attributes.billing_address_country = payload.billing_address_country;
+  if (payload.email1) attributes.email1 = payload.email1;
+  if (payload.phone_office) attributes.phone_office = payload.phone_office;
+  if (payload.account_type) attributes.account_type = payload.account_type;
+  if (payload.sic_code) attributes.sic_code = payload.sic_code;
+
+  const v8Record: SaciV8Record = saciId
+    ? { data: { type: 'Accounts', id: saciId, attributes } }
+    : { data: { type: 'Accounts', attributes } };
 
   if (saciId) {
-    return { endpoint: `/clientes/${saciId}`, method: 'PATCH', payload: cliente };
+    return { endpoint: `/module/Accounts/${saciId}`, method: 'PATCH', payload: v8Record };
   }
-  return { endpoint: '/clientes', method: 'POST', payload: cliente };
+  return { endpoint: '/module/Accounts', method: 'POST', payload: v8Record };
 }

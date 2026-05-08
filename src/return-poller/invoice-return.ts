@@ -144,15 +144,14 @@ async function createInvoice(
   // Write directly to DB — bypasses after_save hooks to prevent outbox loop
   await pool.execute<ResultSetHeader>(
     `INSERT INTO aos_invoices
-       (id, name, billing_account_id,  total_amount, total_amount_usdollar,
+       (id, name, billing_account_id, total_amount, total_amount_usdollar,
         status, due_date, currency_id, date_entered, date_modified,
         created_by, modified_user_id, deleted)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, '-99', ?, ?, '1', '1', 0)`,
+     VALUES (?, ?, ?, ?, ?, ?, ?, '-99', ?, ?, '1', '1', 0)`,
     [
       firmasId,
       attrs.name ?? `INV-${saciId.slice(0, 8)}`,
       billingAccountId ?? null,
-      quoteId ?? null,
       toDecimal(attrs.total_amount),
       toDecimal(attrs.total_amount),
       attrs.status ?? 'Draft',

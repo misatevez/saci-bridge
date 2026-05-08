@@ -21,7 +21,7 @@ export async function fetchPendingRows(batchSize: number): Promise<OutboxRow[]> 
   const pool = getFirmasPool();
   const limit = Number(batchSize);
   const [rows] = await pool.query<RowDataPacket[]>(
-    `SELECT id, module, record_id, payload, status, attempts,
+    `SELECT id, module, record_id, CAST(payload AS CHAR) AS payload, status, attempts,
             next_attempt_at, sent_at, created_at
      FROM saci_outbox
      WHERE status = 'pending'

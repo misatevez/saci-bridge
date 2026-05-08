@@ -155,7 +155,7 @@ async function createInvoice(
       toDecimal(attrs.total_amount),
       toDecimal(attrs.total_amount),
       attrs.status ?? 'Draft',
-      attrs.due_date ?? null,
+      attrs.due_date || null,
       attrs.date_entered ? new Date(attrs.date_entered) : now,
       now,
     ],

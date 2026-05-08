@@ -1,4 +1,4 @@
-import type { SaciCliente, TransformResult } from './types.js';
+import type { SaciV8Record, TransformResult } from './types.js';
 
 export interface ContactPayload {
   id: string;
@@ -14,31 +14,23 @@ export interface ContactPayload {
   identification?: string;
 }
 
-/**
- * @param saciId - Existing SaciERP client ID; when provided, generates a PATCH request.
- */
 export function transformContact(payload: ContactPayload, saciId?: string | null): TransformResult {
-  const fullName = [payload.first_name, payload.last_name].filter(Boolean).join(' ');
+  const attributes: Record<string, unknown> = { last_name: payload.last_name };
 
-  const address = [
-    payload.primary_address_street,
-    payload.primary_address_city,
-    payload.primary_address_country,
-  ]
-    .filter(Boolean)
-    .join(', ');
+  if (payload.first_name) attributes.first_name = payload.first_name;
+  if (payload.email1) attributes.email1 = payload.email1;
+  if (payload.phone_mobile) attributes.phone_mobile = payload.phone_mobile;
+  else if (payload.phone_work) attributes.phone_work = payload.phone_work;
+  if (payload.primary_address_street) attributes.primary_address_street = payload.primary_address_street;
+  if (payload.primary_address_city) attributes.primary_address_city = payload.primary_address_city;
+  if (payload.primary_address_country) attributes.primary_address_country = payload.primary_address_country;
 
-  const cliente: SaciCliente = {
-    identificationType: payload.contact_type ?? 'CI',
-    identification: payload.identification ?? payload.id,
-    socialReason: fullName,
-    email: payload.email1,
-    phone: payload.phone_mobile ?? payload.phone_work,
-    address: address || undefined,
-  };
+  const v8Record: SaciV8Record = saciId
+    ? { data: { type: 'Contacts', id: saciId, attributes } }
+    : { data: { type: 'Contacts', attributes } };
 
   if (saciId) {
-    return { endpoint: `/clientes/${saciId}`, method: 'PATCH', payload: cliente };
+    return { endpoint: `/module/Contacts/${saciId}`, method: 'PATCH', payload: v8Record };
   }
-  return { endpoint: '/clientes', method: 'POST', payload: cliente };
+  return { endpoint: '/module/Contacts', method: 'POST', payload: v8Record };
 }

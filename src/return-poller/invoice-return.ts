@@ -143,7 +143,7 @@ async function createInvoice(
 
   // Write directly to DB — bypasses after_save hooks to prevent outbox loop
   await pool.execute<ResultSetHeader>(
-    `INSERT INTO AOS_Invoices
+    `INSERT INTO aos_invoices
        (id, name, billing_account_id,  total_amount, total_amount_usdollar,
         status, due_date, currency_id, date_entered, date_modified,
         created_by, modified_user_id, deleted)
@@ -165,7 +165,7 @@ async function createInvoice(
   // Write external_id_c to cstm table so reconcile script can match later
   try {
     await pool.execute<ResultSetHeader>(
-      `INSERT INTO AOS_Invoices_cstm (id_c, external_id_c) VALUES (?, ?)
+      `INSERT INTO aos_invoices_cstm (id_c, external_id_c) VALUES (?, ?)
        ON DUPLICATE KEY UPDATE external_id_c = VALUES(external_id_c)`,
       [firmasId, saciId],
     );
@@ -198,7 +198,7 @@ async function updateInvoice(
   values.push(firmasId);
 
   await pool.execute<ResultSetHeader>(
-    `UPDATE AOS_Invoices SET ${updates.join(', ')} WHERE id = ? AND deleted = 0`,
+    `UPDATE aos_invoices SET ${updates.join(', ')} WHERE id = ? AND deleted = 0`,
     values,
   );
 }

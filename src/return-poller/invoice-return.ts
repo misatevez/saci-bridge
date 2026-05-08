@@ -116,17 +116,14 @@ async function upsertInvoiceInFirmas(invoice: SaciInvoice): Promise<void> {
   }
 
   // Create new invoice in firmas
-  const [billingAccountId, quoteId] = await Promise.all([
-    resolveAccountId(attrs.billing_account_id),
-    resolveQuoteId(undefined),
-  ]);
+  const billingAccountId = await resolveAccountId(attrs.billing_account_id);
 
   const newId = randomUUID();
-  await createInvoice(newId, attrs, billingAccountId, quoteId, saciId);
+  await createInvoice(newId, attrs, billingAccountId, saciId);
   await upsertMapping(MODULE, newId, saciId);
 
   logger.info(
-    { '[RETURN-POLLER]': true, firmasId: newId, saciId, quoteLinked: !!quoteId },
+    { '[RETURN-POLLER]': true, firmasId: newId, saciId },
     '[RETURN-POLLER] Invoice created',
   );
 }
@@ -135,22 +132,27 @@ async function createInvoice(
   firmasId: string,
   attrs: SaciInvoice['attributes'],
   billingAccountId: string | undefined,
-  quoteId: string | undefined,
   saciId: string,
 ): Promise<void> {
   const pool = getFirmasPool();
   const now = new Date();
 
+  const [numRows] = await pool.execute<RowDataPacket[]>(
+    'SELECT COALESCE(MAX(number), 0) + 1 AS next_num FROM aos_invoices WHERE deleted = 0',
+  );
+  const nextNum = (numRows[0]?.next_num as number | undefined) ?? 1;
+
   // Write directly to DB — bypasses after_save hooks to prevent outbox loop
   await pool.execute<ResultSetHeader>(
     `INSERT INTO aos_invoices
-       (id, name, billing_account_id, total_amount, total_amount_usdollar,
+       (id, name, number, billing_account_id, total_amount, total_amount_usdollar,
         status, due_date, currency_id, date_entered, date_modified,
         created_by, modified_user_id, deleted)
-     VALUES (?, ?, ?, ?, ?, ?, ?, '-99', ?, ?, '1', '1', 0)`,
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, '-99', ?, ?, '1', '1', 0)`,
     [
       firmasId,
       attrs.name ?? `INV-${saciId.slice(0, 8)}`,
+      nextNum,
       billingAccountId ?? null,
       toDecimal(attrs.total_amount),
       toDecimal(attrs.total_amount),

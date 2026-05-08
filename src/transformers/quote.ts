@@ -173,7 +173,7 @@ async function syncLineItems(
     };
     if (saciProductId) lineAttrs['product_id'] = saciProductId;
 
-    const outcome = await deps.callSaci(outboxId, 'POST', '/module/AOS_Products_Quotes', {
+    const outcome = await deps.callSaci(outboxId, 'POST', '/module', {
       data: { type: 'AOS_Products_Quotes', attributes: lineAttrs },
     });
 
@@ -224,7 +224,7 @@ function makeHandler(payload: QuotePayload, saciId: string | null) {
 
     if (!currentSaciId) {
       // CREATE
-      const outcome = await deps.callSaci(outboxId, 'POST', '/module/AOS_Quotes', {
+      const outcome = await deps.callSaci(outboxId, 'POST', '/module', {
         data: { type: 'AOS_Quotes', attributes },
       });
       if (!outcome.ok) {

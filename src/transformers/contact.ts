@@ -32,5 +32,5 @@ export function transformContact(payload: ContactPayload, saciId?: string | null
   if (saciId) {
     return { endpoint: `/module/Contacts/${saciId}`, method: 'PATCH', payload: v8Record };
   }
-  return { endpoint: '/module/Contacts', method: 'POST', payload: v8Record };
+  return { endpoint: '/module', method: 'POST', payload: v8Record };
 }

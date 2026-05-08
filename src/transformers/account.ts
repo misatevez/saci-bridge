@@ -30,5 +30,5 @@ export function transformAccount(payload: AccountPayload, saciId?: string | null
   if (saciId) {
     return { endpoint: `/module/Accounts/${saciId}`, method: 'PATCH', payload: v8Record };
   }
-  return { endpoint: '/module/Accounts', method: 'POST', payload: v8Record };
+  return { endpoint: '/module', method: 'POST', payload: v8Record };
 }

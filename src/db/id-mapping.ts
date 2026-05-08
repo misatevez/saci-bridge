@@ -2,9 +2,9 @@ import type { RowDataPacket, ResultSetHeader } from 'mysql2/promise';
 import { getLocalPool } from './local.js';
 
 export interface IdMapping {
-  firmas_id: string;
+  crm_id: string;
   saci_id: string;
-  module: string;
+  entity_type: string;
   created_at: Date;
   updated_at: Date;
 }
@@ -17,7 +17,7 @@ export async function getSaciId(module: string, firmasId: string): Promise<strin
   try {
     const pool = getLocalPool();
     const [rows] = await pool.execute<RowDataPacket[]>(
-      'SELECT saci_id FROM saci_id_mapping WHERE module = ? AND firmas_id = ?',
+      'SELECT saci_id FROM saci_id_mapping WHERE entity_type = ? AND crm_id = ?',
       [module, firmasId],
     );
     return rows.length > 0 ? (rows[0]!['saci_id'] as string) : null;
@@ -35,10 +35,10 @@ export async function getFirmasId(module: string, saciId: string): Promise<strin
   try {
     const pool = getLocalPool();
     const [rows] = await pool.execute<RowDataPacket[]>(
-      'SELECT firmas_id FROM saci_id_mapping WHERE module = ? AND saci_id = ?',
+      'SELECT crm_id FROM saci_id_mapping WHERE entity_type = ? AND saci_id = ?',
       [module, saciId],
     );
-    return rows.length > 0 ? (rows[0]!['firmas_id'] as string) : null;
+    return rows.length > 0 ? (rows[0]!['crm_id'] as string) : null;
   } catch {
     return null;
   }
@@ -51,12 +51,14 @@ export async function upsertMapping(module: string, firmasId: string, saciId: st
   try {
     const pool = getLocalPool();
     await pool.execute<ResultSetHeader>(
-      `INSERT INTO saci_id_mapping (module, firmas_id, saci_id, created_at, updated_at)
+      `INSERT INTO saci_id_mapping (entity_type, crm_id, saci_id, created_at, updated_at)
        VALUES (?, ?, ?, NOW(), NOW())
-       ON DUPLICATE KEY UPDATE saci_id = VALUES(saci_id), updated_at = NOW()`,
+       ON DUPLICATE KEY UPDATE crm_id = VALUES(crm_id), entity_type = VALUES(entity_type), updated_at = NOW()`,
       [module, firmasId, saciId],
     );
-  } catch {
-    // Non-fatal: mapping is best-effort; next sync will re-create if missing
+  } catch (err) {
+    // Log the error — silent failures here caused the duplicate-invoice bug
+    const { logger } = await import('../logger.js');
+    logger.error({ err, module, firmasId, saciId }, '[ID-MAPPING] upsertMapping failed');
   }
 }

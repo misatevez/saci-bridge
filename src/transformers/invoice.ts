@@ -82,7 +82,7 @@ export function transformInvoice(
   }
 
   return {
-    endpoint: '/module/AOS_Invoices',
+    endpoint: '/module',
     method: 'POST',
     payload: { data: { type: 'AOS_Invoices', attributes } },
   };
@@ -113,7 +113,7 @@ export function transformInvoiceLineItem(
   }
 
   return {
-    endpoint: '/module/AOS_Products_Quotes',
+    endpoint: '/module',
     method: 'POST',
     payload: { data: { type: 'AOS_Products_Quotes', attributes } },
   };

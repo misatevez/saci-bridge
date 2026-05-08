@@ -21,7 +21,7 @@ async function buildClient() {
     baseURL: config.saciErp.apiUrl,
     timeout: TIMEOUT_MS,
     headers: {
-      'Content-Type': 'application/json',
+      'Content-Type': 'application/vnd.api+json',
       Authorization: `Bearer ${token}`,
     },
   });
